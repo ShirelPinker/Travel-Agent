@@ -4,11 +4,8 @@ const API_SECRET = process.env.AMADEUS_API_SECRET;
 export async function getFlights(depIata, arrIata, date) {
     try {
         const token = await getAmadeusToken();
-
         const rawOffers = await searchAmadeusFlights(token, depIata, arrIata, date);
-
-        const flights = normalizeFlights(rawOffers);
-
+        const flights = formatFlightsResponse(rawOffers);
         return {
             depIata,
             arrIata,
@@ -32,12 +29,10 @@ export async function getFlights(depIata, arrIata, date) {
 
 async function getAmadeusToken() {
     const tokenUrl = "https://test.api.amadeus.com/v1/security/oauth2/token";
-
     const params = new URLSearchParams();
     params.append("grant_type", "client_credentials");
     params.append("client_id", API_KEY);
     params.append("client_secret", API_SECRET);
-
     const res = await fetch(tokenUrl, {
         method: "POST",
         headers: {
@@ -57,7 +52,6 @@ async function getAmadeusToken() {
 
 async function searchAmadeusFlights(token, depIata, arrIata, date) {
     const url = "https://test.api.amadeus.com/v2/shopping/flight-offers";
-
     const body = {
         currencyCode: "USD",
         originDestinations: [
@@ -82,32 +76,32 @@ async function searchAmadeusFlights(token, depIata, arrIata, date) {
     });
 
     const data = await res.json();
-
     if (!res.ok) {
         throw new Error(data?.errors?.[0]?.detail || "Flight search failed");
     }
-
     return data.data || [];
 }
 
 
-function normalizeFlights(offers) {
+function formatFlightsResponse(offers) {
     if (!offers || offers.length === 0) return [];
+    const firstFiveOffers = offers.slice(0, 5);
+    return firstFiveOffers.map(normalizeOffer);
+}
 
-    return offers.slice(0, 5).map((offer) => {
-        const itinerary = offer.itineraries[0];
-        const firstSeg = itinerary.segments[0];
-        const lastSeg = itinerary.segments[itinerary.segments.length - 1];
+function normalizeOffer(offer) {
+    const itinerary = offer.itineraries[0];
+    const firstSeg = itinerary.segments[0];
+    const lastSeg = itinerary.segments[itinerary.segments.length - 1];
 
-        return {
-            airline: firstSeg.carrierCode,
-            flightNumber: firstSeg.number,
-            departureAirport: firstSeg.departure.iataCode,
-            arrivalAirport: lastSeg.arrival.iataCode,
-            departureTime: firstSeg.departure.at,
-            arrivalTime: lastSeg.arrival.at,
-            duration: itinerary.duration,
-            price: offer.price?.total
-        };
-    });
+    return {
+        airline: firstSeg.carrierCode,
+        flightNumber: firstSeg.number,
+        departureAirport: firstSeg.departure.iataCode,
+        arrivalAirport: lastSeg.arrival.iataCode,
+        departureTime: firstSeg.departure.at,
+        arrivalTime: lastSeg.arrival.at,
+        duration: itinerary.duration,
+        price: offer.price?.total
+    };
 }
