@@ -2,10 +2,10 @@
   "name": "navanha",
   "version": "1.0.0",
   "type": "module",
-  "main": "src/index.js",
+  "main": "server/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "server": "node src/server.js",
+    "start": "node server/index.js",
+    "server": "node server/server.js",
     "client": "npm run dev --prefix client",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "build": "npm run build --prefix client",
